@@ -318,13 +318,19 @@ class SpriteRenderer {
     }
 
     // Draw the Consultant Player Character
-    drawConsultant(ctx, x, y, width, height, characterType, facing, isHopping, hopProgress, hasShield, hasCoffeeBoost, isInvulnerable = false) {
+    drawConsultant(ctx, x, y, width, height, characterType, facing, isHopping, hopProgress, hasShield, hasCoffeeBoost, isInvulnerable = false, isTequilaActive = false) {
         ctx.save();
         ctx.translate(x + width / 2, y + height / 2);
 
         // Invulnerability blinking
         if (isInvulnerable && Math.floor(this.animTime * 14) % 2 === 0) {
             ctx.globalAlpha = 0.35;
+        }
+
+        // Drunken Tequila wobble sway
+        if (isTequilaActive) {
+            const drunkSway = Math.sin(this.animTime * 9) * 0.22;
+            ctx.rotate(drunkSway);
         }
 
         // Coffee boost aura trail
@@ -997,6 +1003,25 @@ class SpriteRenderer {
             ctx.fillStyle = '#0284c7';
             ctx.fillRect(3, 8, 4, 7);
             ctx.fillRect(17, 8, 4, 7);
+        } else if (item.type === 'tequila') {
+            // Golden Agave Tequila Shot Glass
+            // Glass base & body
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            ctx.fillRect(8, 7, 8, 14);
+            // Golden Tequila liquid
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(9, 10, 6, 10);
+            // White salt rim
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(7, 6, 10, 1.5);
+            // Fresh green lime wedge clipped on rim
+            ctx.fillStyle = '#84cc16';
+            ctx.beginPath();
+            ctx.arc(6, 6, 5, -Math.PI * 0.6, Math.PI * 0.3);
+            ctx.fill();
+            ctx.strokeStyle = '#4d7c0f';
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
 
         ctx.restore();
