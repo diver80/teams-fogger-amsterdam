@@ -349,8 +349,9 @@ class SoundEngine {
             if (this.musicStep % 4 === 2) {
                 const hatOsc = this.ctx.createOscillator();
                 const hatGain = this.ctx.createGain();
-                hatOsc.type = 'highpass';
-                hatGain.gain.setValueAtTime(this.masterVolume * 0.03, now);
+                hatOsc.type = 'triangle';
+                hatOsc.frequency.setValueAtTime(6000, now);
+                hatGain.gain.setValueAtTime(this.masterVolume * 0.04, now);
                 hatGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
                 hatOsc.connect(hatGain);
                 hatGain.connect(this.ctx.destination);

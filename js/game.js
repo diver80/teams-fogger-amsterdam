@@ -83,15 +83,17 @@
             this.currentTime = 60;
 
             // Player state
+            const initialX = 6 * TILE_WIDTH + (TILE_WIDTH - 38) / 2;
+            const initialY = 10 * TILE_HEIGHT + (TILE_HEIGHT - 38) / 2;
             this.player = {
                 gridX: 6,
                 gridY: 10, // Starting at bottom hotel sidewalk
-                x: 6 * TILE_WIDTH,
-                y: 10 * TILE_HEIGHT,
-                targetX: 6 * TILE_WIDTH,
-                targetY: 10 * TILE_HEIGHT,
-                startX: 6 * TILE_WIDTH,
-                startY: 10 * TILE_HEIGHT,
+                x: initialX,
+                y: initialY,
+                targetX: initialX,
+                targetY: initialY,
+                startX: initialX,
+                startY: initialY,
                 width: 38,
                 height: 38,
                 facing: 'up',
@@ -100,6 +102,8 @@
                 hopDuration: 0.11,
                 highestRowReached: 10,
                 shield: false,
+                isInvulnerable: false,
+                invulnerableTimer: 0,
                 coffeeBoost: false,
                 coffeeTimer: 0,
                 abilityCharges: 1,
@@ -112,6 +116,7 @@
             this.tramTimer = 10;
             this.tramActive = false;
             this.tram = null;
+            this.collectibleTimer = 12;
 
             // Collectibles & Floating particles / text
             this.collectibles = [];
@@ -334,15 +339,30 @@
                 }
             };
 
-            if (btnUp) btnUp.addEventListener('click', (e) => { e.preventDefault(); handleBtn(0, -1, 'up'); });
-            if (btnDown) btnDown.addEventListener('click', (e) => { e.preventDefault(); handleBtn(0, 1, 'down'); });
-            if (btnLeft) btnLeft.addEventListener('click', (e) => { e.preventDefault(); handleBtn(-1, 0, 'left'); });
-            if (btnRight) btnRight.addEventListener('click', (e) => { e.preventDefault(); handleBtn(1, 0, 'right'); });
-            if (btnSpecial) btnSpecial.addEventListener('click', (e) => {
-                e.preventDefault();
-                sounds.init();
-                this.useSpecialAbility();
-            });
+            const bindBtn = (el, dx, dy, dir) => {
+                if (!el) return;
+                const fire = (e) => {
+                    e.preventDefault();
+                    handleBtn(dx, dy, dir);
+                };
+                el.addEventListener('pointerdown', fire);
+                el.addEventListener('click', (e) => e.preventDefault());
+            };
+
+            bindBtn(btnUp, 0, -1, 'up');
+            bindBtn(btnDown, 0, 1, 'down');
+            bindBtn(btnLeft, -1, 0, 'left');
+            bindBtn(btnRight, 1, 0, 'right');
+
+            if (btnSpecial) {
+                const fireSpecial = (e) => {
+                    e.preventDefault();
+                    sounds.init();
+                    this.useSpecialAbility();
+                };
+                btnSpecial.addEventListener('pointerdown', fireSpecial);
+                btnSpecial.addEventListener('click', (e) => e.preventDefault());
+            }
 
             // Touch Swipe handling on canvas
             let touchStartX = 0;
@@ -390,7 +410,7 @@
                 muteBtn.addEventListener('click', () => {
                     sounds.init();
                     const isMuted = sounds.toggleMute();
-                    muteBtn.textContent = isMuted ? '🔇 Unmute Sound' : '🔊 Mute Sound';
+                    muteBtn.textContent = isMuted ? '🔇 Sound: OFF' : '🔊 Sound: ON';
                     muteBtn.classList.toggle('muted', isMuted);
                 });
             }
@@ -479,28 +499,35 @@
         respawnPlayer(lostLife = true) {
             this.player.gridX = 6;
             this.player.gridY = 10;
-            this.player.x = 6 * TILE_WIDTH;
-            this.player.y = 10 * TILE_HEIGHT;
-            this.player.targetX = this.player.x;
-            this.player.targetY = this.player.y;
+            const startX = 6 * TILE_WIDTH + (TILE_WIDTH - this.player.width) / 2;
+            const startY = 10 * TILE_HEIGHT + (TILE_HEIGHT - this.player.height) / 2;
+            this.player.x = startX;
+            this.player.y = startY;
+            this.player.startX = startX;
+            this.player.startY = startY;
+            this.player.targetX = startX;
+            this.player.targetY = startY;
             this.player.facing = 'up';
             this.player.isHopping = false;
             this.player.hopTimer = 0;
             this.player.highestRowReached = 10;
             this.player.shield = false;
+            this.player.isInvulnerable = false;
+            this.player.invulnerableTimer = 0;
             this.player.coffeeBoost = false;
             this.player.coffeeTimer = 0;
             this.player.abilityCharges = 1;
             this.player.isFrozen = false;
             this.currentTime = this.roundTime;
 
+            this.updateAbilityUI();
             if (lostLife) {
                 this.updateUI();
             }
         }
 
         movePlayer(dx, dy, dir) {
-            if (this.player.isHopping) return;
+            if (this.player.isHopping || this.player.gridY === 0) return;
 
             const targetGridX = this.player.gridX + dx;
             const targetGridY = this.player.gridY + dy;
@@ -508,6 +535,9 @@
             // Boundary checks
             if (targetGridX < 0 || targetGridX >= COLS) return;
             if (targetGridY < 0 || targetGridY >= ROWS) return;
+
+            let targetX = targetGridX * TILE_WIDTH + (TILE_WIDTH - this.player.width) / 2;
+            let targetY = targetGridY * TILE_HEIGHT + (TILE_HEIGHT - this.player.height) / 2;
 
             // Row 0 is the goal bay row. Must land inside one of the 5 open gates!
             if (targetGridY === 0) {
@@ -518,6 +548,8 @@
                     sounds.playBikeBell();
                     return;
                 }
+                targetX = bay.x + (bay.width - this.player.width) / 2;
+                targetY = bay.y + (bay.height - this.player.height) / 2;
             }
 
             this.player.facing = dir;
@@ -525,8 +557,8 @@
             this.player.gridY = targetGridY;
             this.player.startX = this.player.x;
             this.player.startY = this.player.y;
-            this.player.targetX = targetGridX * TILE_WIDTH + (TILE_WIDTH - this.player.width) / 2;
-            this.player.targetY = targetGridY * TILE_HEIGHT + (TILE_HEIGHT - this.player.height) / 2;
+            this.player.targetX = targetX;
+            this.player.targetY = targetY;
             this.player.isHopping = true;
             this.player.hopTimer = 0;
 
@@ -541,7 +573,7 @@
         }
 
         findGoalBayAt(gridX) {
-            return GOAL_BAYS.find(bay => Math.abs(bay.col - gridX) <= 1);
+            return GOAL_BAYS.find(bay => bay.col === gridX);
         }
 
         useSpecialAbility() {
@@ -628,6 +660,8 @@
             // Check if player has Noise Canceling shield active
             if (this.player.shield) {
                 this.player.shield = false;
+                this.player.isInvulnerable = true;
+                this.player.invulnerableTimer = 1.4;
                 sounds.playBikeBell();
                 this.addFloatingText('🛡️ SHIELD SAVED YOU!', this.player.x, this.player.y - 15, '#38bdf8');
                 return;
@@ -754,6 +788,21 @@
                 if (this.player.freezeTimer <= 0) {
                     this.player.isFrozen = false;
                 }
+            }
+
+            // Invulnerability timer after shield hit
+            if (this.player.isInvulnerable) {
+                this.player.invulnerableTimer -= dt;
+                if (this.player.invulnerableTimer <= 0) {
+                    this.player.isInvulnerable = false;
+                }
+            }
+
+            // Periodic collectible replenishment
+            this.collectibleTimer -= dt;
+            if (this.collectibleTimer <= 0) {
+                this.spawnCollectible();
+                this.collectibleTimer = 14 + Math.random() * 8;
             }
 
             // Coffee sprint timer
@@ -916,6 +965,7 @@
         }
 
         checkTrafficCollisions() {
+            if (this.player.isInvulnerable) return;
             const playerBox = this.getPlayerHitbox();
 
             // Check bicycle collisions
@@ -1021,7 +1071,8 @@
                     this.player.isHopping,
                     hopProgress,
                     this.player.shield,
-                    this.player.coffeeBoost
+                    this.player.coffeeBoost,
+                    this.player.isInvulnerable
                 );
             }
 

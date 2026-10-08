@@ -318,9 +318,14 @@ class SpriteRenderer {
     }
 
     // Draw the Consultant Player Character
-    drawConsultant(ctx, x, y, width, height, characterType, facing, isHopping, hopProgress, hasShield, hasCoffeeBoost) {
+    drawConsultant(ctx, x, y, width, height, characterType, facing, isHopping, hopProgress, hasShield, hasCoffeeBoost, isInvulnerable = false) {
         ctx.save();
         ctx.translate(x + width / 2, y + height / 2);
+
+        // Invulnerability blinking
+        if (isInvulnerable && Math.floor(this.animTime * 14) % 2 === 0) {
+            ctx.globalAlpha = 0.35;
+        }
 
         // Coffee boost aura trail
         if (hasCoffeeBoost) {
@@ -348,6 +353,16 @@ class SpriteRenderer {
             ctx.restore();
         }
 
+        // Ground shadow under jumper (drawn before jump offset & facing rotation)
+        if (isHopping) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            ctx.beginPath();
+            ctx.ellipse(0, 16, 14 * (1 - Math.sin(hopProgress * Math.PI) * 0.3), 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
         // Hop squash & stretch
         let scaleX = 1;
         let scaleY = 1;
@@ -365,16 +380,6 @@ class SpriteRenderer {
         if (facing === 'down') ctx.rotate(Math.PI);
         if (facing === 'left') ctx.rotate(-Math.PI / 2);
         if (facing === 'right') ctx.rotate(Math.PI / 2);
-
-        // Shadow under jumper
-        if (isHopping) {
-            ctx.save();
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-            ctx.beginPath();
-            ctx.ellipse(0, -jumpOffsetY + 16, 14 * (1 - hopProgress * 0.4), 6, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
 
         const halfW = width / 2;
         const halfH = height / 2;
@@ -528,16 +533,18 @@ class SpriteRenderer {
     // Draw various Amsterdam Cyclists & Vehicles
     drawBicycle(ctx, bike) {
         ctx.save();
-        ctx.translate(bike.x, bike.y);
 
         const dir = bike.direction; // 1 for right, -1 for left
-        if (dir === -1) {
-            ctx.scale(-1, 1);
-        }
-
         const type = bike.type;
         const w = bike.width;
         const h = bike.height;
+
+        if (dir === -1) {
+            ctx.translate(bike.x + w, bike.y);
+            ctx.scale(-1, 1);
+        } else {
+            ctx.translate(bike.x, bike.y);
+        }
 
         // Wheel spinning rotation
         const wheelAngle = (this.animTime * bike.speed * 0.15) % (Math.PI * 2);
