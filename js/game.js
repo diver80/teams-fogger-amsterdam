@@ -81,6 +81,7 @@
             this.lives = 3;
             this.roundTime = 60; // 60 seconds per consultant run
             this.currentTime = 60;
+            this.tequilaModeEnabled = localStorage.getItem('ams_fogger_tequila') === 'true';
 
             // Player state
             const initialX = 6 * TILE_WIDTH + (TILE_WIDTH - 38) / 2;
@@ -106,6 +107,7 @@
                 invulnerableTimer: 0,
                 coffeeBoost: false,
                 coffeeTimer: 0,
+                tequilaRushTimer: 0,
                 abilityCharges: 1,
                 isFrozen: false,
                 freezeTimer: 0
@@ -415,6 +417,21 @@
                 });
             }
 
+            const tequilaBtn = document.getElementById('tequilaBtn');
+            if (tequilaBtn) {
+                tequilaBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.toggleTequilaMode();
+                });
+            }
+
+            const tequilaModalToggle = document.getElementById('tequilaModalToggle');
+            if (tequilaModalToggle) {
+                tequilaModalToggle.addEventListener('change', () => {
+                    this.toggleTequilaMode();
+                });
+            }
+
             const startBtn = document.getElementById('startBtn');
             if (startBtn) {
                 startBtn.addEventListener('click', () => {
@@ -516,6 +533,7 @@
             this.player.invulnerableTimer = 0;
             this.player.coffeeBoost = false;
             this.player.coffeeTimer = 0;
+            this.player.tequilaRushTimer = 0;
             this.player.abilityCharges = 1;
             this.player.isFrozen = false;
             this.currentTime = this.roundTime;
@@ -528,6 +546,18 @@
 
         movePlayer(dx, dy, dir) {
             if (this.player.isHopping || this.player.gridY === 0) return;
+
+            // Invert Left/Right controls when Tequila Mode or Tequila Rush is active
+            const isTequilaActive = this.tequilaModeEnabled || (this.player.tequilaRushTimer > 0);
+            if (isTequilaActive) {
+                if (dx === -1) {
+                    dx = 1;
+                    dir = 'right';
+                } else if (dx === 1) {
+                    dx = -1;
+                    dir = 'left';
+                }
+            }
 
             const targetGridX = this.player.gridX + dx;
             const targetGridY = this.player.gridY + dy;
@@ -598,7 +628,8 @@
 
         addScore(points) {
             const char = CHARACTERS[this.selectedCharacter];
-            const finalPts = Math.round(points * (char.scoreMultiplier || 1.0));
+            const tequilaMult = (this.tequilaModeEnabled || this.player.tequilaRushTimer > 0) ? 1.25 : 1.0;
+            const finalPts = Math.round(points * (char.scoreMultiplier || 1.0) * tequilaMult);
             this.score += finalPts;
             if (this.score > this.highScore) {
                 this.highScore = this.score;
@@ -615,7 +646,7 @@
             const r = validRows[Math.floor(Math.random() * validRows.length)];
             const c = Math.floor(Math.random() * (COLS - 2)) + 1;
 
-            const types = ['stroopwafel', 'coffee', 'swagsocks', 'headphones'];
+            const types = ['stroopwafel', 'coffee', 'swagsocks', 'headphones', 'tequila'];
             const type = types[Math.floor(Math.random() * types.length)];
 
             this.collectibles.push({
@@ -805,6 +836,29 @@
                 this.collectibleTimer = 14 + Math.random() * 8;
             }
 
+            // Tequila rush timer countdown
+            if (this.player.tequilaRushTimer > 0) {
+                this.player.tequilaRushTimer -= dt;
+                if (this.player.tequilaRushTimer <= 0) {
+                    this.player.tequilaRushTimer = 0;
+                }
+            }
+
+            // Drunken party bubbles/dizzy particles
+            const isTequilaActive = this.tequilaModeEnabled || (this.player.tequilaRushTimer > 0);
+            if (isTequilaActive && Math.random() < 0.18) {
+                this.particles.push({
+                    x: this.player.x + 8 + Math.random() * 20,
+                    y: this.player.y - 4,
+                    vx: (Math.random() - 0.5) * 24,
+                    vy: -Math.random() * 40 - 20,
+                    size: Math.random() * 3.5 + 2,
+                    color: Math.random() > 0.5 ? '#facc15' : '#84cc16',
+                    alpha: 1.0,
+                    life: 0.65
+                });
+            }
+
             // Coffee sprint timer
             if (this.player.coffeeBoost) {
                 this.player.coffeeTimer -= dt;
@@ -886,6 +940,11 @@
                     } else if (item.type === 'headphones') {
                         this.player.shield = true;
                         this.addFloatingText('🎧 NOISE CANCELING SHIELD ON!', item.x - 40, item.y - 10, '#38bdf8');
+                    } else if (item.type === 'tequila') {
+                        this.addScore(300);
+                        this.player.tequilaRushTimer = 7.0;
+                        sounds.playTequilaFanfare();
+                        this.addFloatingText('+300 🥃 TEQUILA RUSH! (REVERSED CONTROLS!)', Math.max(10, item.x - 70), item.y - 12, '#f59e0b');
                     }
                 }
             }
@@ -1060,6 +1119,7 @@
                     ? Math.min(1.0, this.player.hopTimer / (this.player.coffeeBoost ? this.player.hopDuration * 0.65 : this.player.hopDuration))
                     : 0;
 
+                const isTequilaActive = this.tequilaModeEnabled || (this.player.tequilaRushTimer > 0);
                 sprites.drawConsultant(
                     ctx,
                     this.player.x,
@@ -1072,7 +1132,8 @@
                     hopProgress,
                     this.player.shield,
                     this.player.coffeeBoost,
-                    this.player.isInvulnerable
+                    this.player.isInvulnerable,
+                    isTequilaActive
                 );
             }
 
@@ -1133,6 +1194,18 @@
             // Green to Red gradient as time runs low
             ctx.fillStyle = timerRatio > 0.3 ? '#22c55e' : (timerRatio > 0.15 ? '#eab308' : '#ef4444');
             ctx.fillRect(10, timerY, timerWidth, 5);
+
+            // Tequila Mode indicator badge in HUD
+            const isTequilaActive = this.tequilaModeEnabled || (this.player.tequilaRushTimer > 0);
+            if (isTequilaActive) {
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = 'bold 9px -apple-system, sans-serif';
+                ctx.textAlign = 'right';
+                const tag = this.player.tequilaRushTimer > 0
+                    ? `🥃 TEQUILA RUSH: ${Math.ceil(this.player.tequilaRushTimer)}s (1.25x)`
+                    : `🌵 TEQUILA MODE (1.25x)`;
+                ctx.fillText(tag, CANVAS_WIDTH - 12, 42);
+            }
             ctx.restore();
         }
 
@@ -1141,10 +1214,21 @@
             const highScoreEl = document.getElementById('highScoreDisplay');
             const levelEl = document.getElementById('levelDisplay');
             const livesEl = document.getElementById('livesContainer');
+            const tequilaBtn = document.getElementById('tequilaBtn');
+            const tequilaModalToggle = document.getElementById('tequilaModalToggle');
 
             if (scoreEl) scoreEl.textContent = this.score.toString();
             if (highScoreEl) highScoreEl.textContent = this.highScore.toString();
             if (levelEl) levelEl.textContent = `Stage ${this.level}`;
+
+            if (tequilaBtn) {
+                tequilaBtn.textContent = this.tequilaModeEnabled ? '🌵 Tequila: ON (1.25x)' : '🌵 Tequila: OFF';
+                tequilaBtn.classList.toggle('active', this.tequilaModeEnabled);
+            }
+
+            if (tequilaModalToggle) {
+                tequilaModalToggle.checked = this.tequilaModeEnabled;
+            }
 
             if (livesEl) {
                 livesEl.innerHTML = '';
@@ -1156,6 +1240,20 @@
                     livesEl.appendChild(badge);
                 }
             }
+        }
+
+        toggleTequilaMode() {
+            this.tequilaModeEnabled = !this.tequilaModeEnabled;
+            localStorage.setItem('ams_fogger_tequila', this.tequilaModeEnabled.toString());
+            sounds.init();
+            if (this.tequilaModeEnabled) {
+                sounds.playTequilaFanfare();
+                this.addFloatingText('🌵 TEQUILA MODE ON! (CONTROLS INVERTED)', CANVAS_WIDTH / 2 - 120, CANVAS_HEIGHT / 2, '#f59e0b');
+            } else {
+                sounds.playBikeBell();
+                this.addFloatingText('🌵 Tequila Mode OFF', CANVAS_WIDTH / 2 - 60, CANVAS_HEIGHT / 2, '#94a3b8');
+            }
+            this.updateUI();
         }
 
         updateAbilityUI() {
