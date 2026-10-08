@@ -370,6 +370,72 @@ class SoundEngine {
             this.musicInterval = null;
         }
     }
+
+    playTequilaFanfare() {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        // Iconic "Tequila" saxophone riff (The Champs, 1958)
+        // Key of F: F4, F4, Ab4, F4, Eb4, F4
+        const now = this.ctx.currentTime;
+        const notes = [
+            { f: 349.23, t: 0.00, d: 0.12 }, // F4
+            { f: 349.23, t: 0.14, d: 0.12 }, // F4
+            { f: 415.30, t: 0.28, d: 0.16 }, // Ab4
+            { f: 349.23, t: 0.46, d: 0.14 }, // F4
+            { f: 311.13, t: 0.62, d: 0.14 }, // Eb4
+            { f: 349.23, t: 0.78, d: 0.28 }  // F4
+        ];
+
+        notes.forEach(n => {
+            const osc = this.ctx.createOscillator();
+            const osc2 = this.ctx.createOscillator();
+            const filter = this.ctx.createBiquadFilter();
+            const gain = this.ctx.createGain();
+            const t = now + n.t;
+
+            // Saxophone-like brass harmonics
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(n.f, t);
+
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(n.f, t);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1400, t);
+
+            gain.gain.setValueAtTime(this.masterVolume * 0.48, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + n.d);
+
+            osc.connect(filter);
+            osc2.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(t);
+            osc2.start(t);
+            osc.stop(t + n.d + 0.05);
+            osc2.stop(t + n.d + 0.05);
+        });
+
+        // The iconic "TEQUILA!" vocal shout right after the saxophone riff!
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            setTimeout(() => {
+                if (this.muted) return;
+                try {
+                    window.speechSynthesis.cancel();
+                    const shout = new SpeechSynthesisUtterance('Tequila!');
+                    shout.rate = 1.05;
+                    shout.pitch = 0.75;
+                    shout.volume = Math.min(1.0, this.masterVolume * 2);
+                    window.speechSynthesis.speak(shout);
+                } catch (e) {
+                    // Fallback gracefully if speech synthesis is blocked
+                }
+            }, 1050);
+        }
+    }
 }
 
 window.soundEngine = new SoundEngine();
