@@ -57,33 +57,41 @@ Add method to `SoundEngine`:
         this.init();
         if (!this.ctx) return;
 
-        // Lively Mexican / Mariachi two-part brass trumpet motif
+        // Iconic "Tequila" saxophone riff (The Champs, 1958)
+        // Key of F: F4, F4, Ab4, F4, Eb4, F4
         const now = this.ctx.currentTime;
         const notes = [
-            { f: 587.33, t: 0, d: 0.12 },     // D5
-            { f: 739.99, t: 0.10, d: 0.12 },  // F#5
-            { f: 880.00, t: 0.20, d: 0.14 },  // A5
-            { f: 1174.66, t: 0.32, d: 0.28 }  // D6 (high flourish)
+            { f: 349.23, t: 0.00, d: 0.12 }, // F4
+            { f: 349.23, t: 0.14, d: 0.12 }, // F4
+            { f: 415.30, t: 0.28, d: 0.16 }, // Ab4
+            { f: 349.23, t: 0.46, d: 0.14 }, // F4
+            { f: 311.13, t: 0.62, d: 0.14 }, // Eb4
+            { f: 349.23, t: 0.78, d: 0.28 }  // F4
         ];
 
         notes.forEach(n => {
             const osc = this.ctx.createOscillator();
             const osc2 = this.ctx.createOscillator();
+            const filter = this.ctx.createBiquadFilter();
             const gain = this.ctx.createGain();
             const t = now + n.t;
 
+            // Saxophone-like harmonics
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(n.f, t);
 
-            // Rich brass overtone
-            osc2.type = 'triangle';
-            osc2.frequency.setValueAtTime(n.f * 2, t);
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(n.f, t);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1200, t);
 
             gain.gain.setValueAtTime(this.masterVolume * 0.45, t);
             gain.gain.exponentialRampToValueAtTime(0.001, t + n.d);
 
-            osc.connect(gain);
-            osc2.connect(gain);
+            osc.connect(filter);
+            osc2.connect(filter);
+            filter.connect(gain);
             gain.connect(this.ctx.destination);
 
             osc.start(t);
@@ -91,6 +99,23 @@ Add method to `SoundEngine`:
             osc.stop(t + n.d + 0.05);
             osc2.stop(t + n.d + 0.05);
         });
+
+        // The iconic "TEQUILA!" vocal shout right after the riff!
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            setTimeout(() => {
+                if (this.muted) return;
+                try {
+                    window.speechSynthesis.cancel();
+                    const shout = new SpeechSynthesisUtterance('Tequila!');
+                    shout.rate = 1.05;
+                    shout.pitch = 0.75;
+                    shout.volume = Math.min(1.0, this.masterVolume * 2);
+                    window.speechSynthesis.speak(shout);
+                } catch (e) {
+                    // Fallback gracefully if speech synthesis is restricted
+                }
+            }, 1050);
+        }
     }
 ```
 

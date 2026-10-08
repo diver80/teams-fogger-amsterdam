@@ -52,11 +52,13 @@ When `isTequilaActive` is true:
   - Subtle white salt rim line along the glass top.
   - Pulsing golden ambient glow ring.
 
-### 2.3 Procedural Mariachi Fanfare Synthesis
+### 2.3 Iconic "Tequila!" Riff & Vocal Shout Synthesis
 - In `SoundEngine` (`js/audio.js`):
-  - `playTequilaFanfare()`: A lively, brassy Mexican/mariachi trumpet motif synthesized via Web Audio API.
-  - Uses dual square/sawtooth oscillators with bandpass filtering and quick vibrato to emulate trumpet brass timbre.
-  - 100% procedural with zero external audio assets.
+  - `playTequilaFanfare()`: Synthesizes the world-famous saxophone riff from The Champs' classic song *"Tequila!"* using rich dual-sawtooth brass filters:
+    - Notes: `F4 -> F4 -> Ab4 -> F4 -> Eb4 -> F4 -> C5` in syncopated Latin mambo rhythm.
+  - **The "TEQUILA!" Vocal Shout:**
+    - Immediately following the riff, triggers a deep party shout shouting *"TEQUILA!"* via the browser's native `window.speechSynthesis` (with low pitch / celebratory punch) and a synchronized screen banner!
+  - 100% offline, zero external audio files.
 
 ---
 
