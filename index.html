@@ -40,6 +40,7 @@
                 </div>
             </div>
             <div class="hud-controls">
+                <button id="tequilaBtn" class="btn-small tequila-btn" aria-label="Toggle Tequila Mode">🌵 Tequila: OFF</button>
                 <button id="muteBtn" class="btn-small" aria-label="Toggle Sound">🔊 Sound: ON</button>
             </div>
         </div>
@@ -73,6 +74,13 @@
                             <span class="char-name">Enterprise Arch</span>
                             <span class="char-perk">+25% Extra Points on every check-in</span>
                         </div>
+                    </div>
+
+                    <div class="tequila-option-wrap">
+                        <label class="tequila-checkbox-label" for="tequilaModalToggle">
+                            <input type="checkbox" id="tequilaModalToggle">
+                            <span>🌵 Play in <strong>Tequila Mode</strong> (Inverted Left ↔ Right + 1.25x Score!)</span>
+                        </label>
                     </div>
 
                     <button id="startBtn" class="btn-primary">START WALKING TO RAI AMSTERDAM 🚀</button>
@@ -199,6 +207,13 @@
                 </div>
             </div>
             <div class="legend-item">
+                <span class="legend-icon">🥃</span>
+                <div class="legend-desc">
+                    <strong>Tequila Shot</strong>
+                    <span>+300 pts! 7s inverted Left/Right rush, stumble sway &amp; iconic "Tequila!" shout!</span>
+                </div>
+            </div>
+            <div class="legend-item">
                 <span class="legend-icon">🧇</span>
                 <div class="legend-desc">
                     <strong>Power-ups</strong>
@@ -210,6 +225,7 @@
         <ul class="instructions-list">
             <li><span class="kbd">↑ ↓ ← →</span> or <span class="kbd">W A S D</span> to hop between street lanes</li>
             <li><span class="kbd">Space</span> activates Jira Admin Sprint Blocker</li>
+            <li><span class="kbd">🌵 Tequila Mode</span> Inverts Left ↔ Right with drunken sway &amp; 1.25x score!</li>
             <li>📱 On Mobile: Use on-screen D-Pad or swipe gestures on screen</li>
             <li>🎯 Fill all 5 RAI check-in gates to unlock the next Rush Hour!</li>
         </ul>

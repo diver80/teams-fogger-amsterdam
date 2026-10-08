@@ -62,6 +62,16 @@ Fill all 5 check-in bays to complete the stage and advance to the next rush hour
 - ☕ **Flat White Coffee:** +100 points and a 5-second caffeine sprint boost!
 - 🧦 **Atlassian Swag Socks:** +500 points!
 - 🎧 **Noise-Canceling Headphones:** Grants an active shield absorbing 1 bike scrape!
+- 🥃 **Agave Tequila Shot:** +300 points, triggers a 7-second inverted Left/Right rush with stumble sway and iconic *"TEQUILA!"* shout!
+
+---
+
+## 🌵 Tequila Mode (Reversed Left/Right Challenge)
+
+Toggle **Tequila Mode** via the top HUD button or Start screen:
+- Inverts **Left ↔ Right** navigation (<kbd>←</kbd> moves Right, <kbd>→</kbd> moves Left; Up & Down remain standard).
+- Awards a persistent **1.25x Score Multiplier** for consultants brave enough to walk back from the Leidseplein after-party!
+- Drunken stumble animation and synthesized party saxophone riff!
 
 ---
 
